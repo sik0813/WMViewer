@@ -5,18 +5,15 @@
 #include "MessageHook.h"
 
 
-// 내보낸 변수의 예제입니다.
-MESSAGEHOOK_API int nMessageHook=0;
-
-// 내보낸 함수의 예제입니다.
-MESSAGEHOOK_API int fnMessageHook(void)
+EXPORT void startHook(void)
 {
-	return 42;
+
+	return;
 }
 
-// 내보낸 클래스의 생성자입니다.
-// 클래스 정의를 보려면 MessageHook.h를 참조하십시오.
-CMessageHook::CMessageHook()
+
+EXPORT void stopHook(void)
 {
+
 	return;
 }
