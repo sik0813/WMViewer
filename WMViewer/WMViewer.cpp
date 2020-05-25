@@ -1,23 +1,10 @@
-#include <Windows.h>
-#include <windowsx.h>
-#include <Psapi.h>
-#include <iostream>
-#include <string>
-#include "resource.h"
-#include "..\MessageHook\MessageHook.h"
+#include "WMViewer.h"
+#include "HookLibrary.h"
+#include "PipeServer.h"
 
-HINSTANCE LoadDll = NULL;
-typedef void(*Starting)(DWORD);
-typedef void(*Stoping)(void);
-Starting StartHooking;
-Stoping StopHooking;
-
-INT_PTR WINAPI RunProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-BOOL OnInitDialog(HWND hwnd, HWND hwndFocus, LPARAM lParam);
-void OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify);
-BOOL ShowProcessList(HWND hwnd);
-void PrintProcessNameAndID(DWORD processID, HWND hwnd);
-DWORD FindTargetThread(DWORD PID);
+HookLibrary *AllHookLibrary;
+PipeServer *Server;
+BOOL EndShow = FALSE;
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nShowCmd)
 {
@@ -44,42 +31,51 @@ INT_PTR WINAPI RunProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 void OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 {
+	BOOL SuccessFuc = FALSE;
 	switch (id)
 	{
 	case IDCANCEL:
 	case IDOK:
-		FreeLibrary(LoadDll);
-		LoadDll = NULL;
+		AllHookLibrary->~HookLibrary();
+		delete AllHookLibrary;
+		delete Server;
 		EndDialog(hwnd, id);
 		break;
+
 	case IDC_REFRESH:
 		ShowProcessList(hwnd);
 		break;
-	case IDC_START:		
-		StartHooking(0);
-		//StartHook();
+
+	case IDC_START:
+		SuccessFuc = AllHookLibrary->StartHook();
+		if (TRUE == SuccessFuc)
+		{
+			Server->ConnectClient();
+			MessageBoxW(hwnd, L"Start Hooking", L"", MB_OK);
+		}
+
 		break;
-	case IDC_STOP:		
-		StopHooking();
-		//StopHook();
+
+	case IDC_STOP:
+		SuccessFuc = AllHookLibrary->StopHook();
+		if (TRUE == SuccessFuc)
+		{
+			Server->DisconnectClient();
+			MessageBoxW(hwnd, L"Stop Hooking", L"", MB_OK);
+		}
+
 		break;
 	}
 }
 
 // 다이얼로그 초기화
-
 BOOL OnInitDialog(HWND hwnd, HWND hwndFocus, LPARAM lParam)
 {
 	BOOL successFunc = FALSE;
 	//successFunc = ShowProcessList(hwnd);
+	AllHookLibrary = new HookLibrary();
+	Server = new PipeServer();
 
-	LoadDll = LoadLibraryW(L"MessageHook");
-	if (NULL == LoadDll)
-	{
-		return FALSE;
-	}
-	StartHooking = (Starting)GetProcAddress(LoadDll, "startHook");
-	StopHooking = (Stoping)GetProcAddress(LoadDll, "stopHook");
 	return TRUE;
 }
 
@@ -103,7 +99,7 @@ void PrintProcessNameAndID(DWORD processID, HWND hwnd)
 			sizeof(szProcessName) / sizeof(WCHAR)); 
 		if (NULL != successFunc)
 		{
-			std::wstring addItem(wcsrchr(szProcessName, L'\\'));
+			std::wstring addItem(wcsrchr(szProcessName, L'\\') + 1);
 			addItem += L"(PID: ";
 			addItem += std::to_wstring(processID);
 			addItem += L")";
@@ -135,4 +131,17 @@ BOOL ShowProcessList(HWND hwnd)
 		}
 	}
 	return TRUE;
+}
+
+UINT WINAPI ShowWinMessage(LPVOID arg)
+{
+	while (1)
+	{
+		if (TRUE == EndShow)
+		{
+			break;
+		}
+	}
+	EndShow = FALSE;
+	return 0;
 }

@@ -159,12 +159,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="HookLibrary.h" />
+    <ClInclude Include="PipeServer.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="WMViewer.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="WMViewer.rc" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="PipeServer.cpp" />
     <ClCompile Include="WMViewer.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

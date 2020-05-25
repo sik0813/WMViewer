@@ -7,6 +7,7 @@
 typedef struct sendStruct
 {
 	WCHAR message[50];
+	int messageCode;
 	WPARAM wParam;
 	LPARAM lParam;
 }sendStruct;
@@ -37,14 +38,14 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 	return TRUE;
 }
 
-EXPORT void startHook(DWORD threadID)
+EXPORT void StartHook(DWORD threadID)
 {
 	kconnnectHook = SetWindowsHookExW(WH_CALLWNDPROC, (HOOKPROC)GetMsgProc, kdllInstanceHandle, threadID);
 	return;
 }
 
 
-EXPORT void stopHook(void)
+EXPORT void StopHook(void)
 {
 	UnhookWindowsHookEx(kconnnectHook);
 	return;
@@ -68,4 +69,32 @@ LRESULT WINAPI GetMsgProc(int nCode, WPARAM wParam, LPARAM lParam)
 		}
 	}
 	return CallNextHookEx(kconnnectHook, nCode, wParam, lParam);
+}
+
+ClientPipe::ClientPipe()
+{
+	ZeroMemory(&WinData.winMessage, 50);
+	WinData.messageCode = -1;
+	WinData.lParam = 0;
+	WinData.wParam = 0;
+}
+
+ ClientPipe::~ClientPipe()
+{
+
+}
+
+BOOL ClientPipe::ConnectServer()
+{
+	return TRUE;
+}
+
+BOOL ClientPipe::Send()
+{
+	return TRUE;
+}
+
+BOOL ClientPipe::Receive()
+{
+	return TRUE;
 }

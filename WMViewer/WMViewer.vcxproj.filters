@@ -18,6 +18,15 @@
     <ClInclude Include="resource.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="WMViewer.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="HookLibrary.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="PipeServer.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="WMViewer.rc">
@@ -26,6 +35,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WMViewer.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="PipeServer.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
