@@ -2,6 +2,15 @@
 #include <Windows.h>
 #include <stdio.h>
 #include <process.h>
+#include <string>
+
+typedef struct WinMessageData
+{
+	WCHAR winMessage[50];
+	int messageCode;
+	WPARAM wParam;
+	LPARAM lParam;
+} WMData;
 
 class PipeServer
 {
@@ -10,29 +19,19 @@ public:
 	~PipeServer();
 
 private:
-	typedef struct WinMessageData
-	{
-		WCHAR winMessage[50];
-		int messageCode;
-		WPARAM wParam;
-		LPARAM lParam;
-	} WMData;
-
 	LPCWSTR pipeName = L"\\\\.\\pipe\\InjectionPipe";
 	HANDLE namedPipe = INVALID_HANDLE_VALUE;
 	BOOL ConnectFlag = FALSE;
 	HANDLE ConnectClientHandle = INVALID_HANDLE_VALUE;
 	WMData WinData;
-
+	BOOL exitThread = FALSE;
 public:
 	BOOL CreateServer();
 	BOOL ConnectClient();
 	static UINT WINAPI ConnectClientThread(LPVOID arg);
 	BOOL DisconnectClient();
-	void Send();
-	void Receive();
-	WMData GetWinDate()
-	{
-		return WinData;
-	}
+	BOOL Send();
+	BOOL Receive();
+	BOOL GetWinData(std::wstring& returnString);
+	BOOL GetexitThread();
 };

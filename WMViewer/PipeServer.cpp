@@ -87,7 +87,16 @@ BOOL PipeServer::ConnectClient()
 // 연결 대기 스레드 함수
 UINT WINAPI PipeServer::ConnectClientThread(LPVOID arg)
 {
-	((PipeServer*)arg)->ConnectClient();
+	BOOL successFunc = FALSE;
+	while (1)
+	{
+		successFunc = ((PipeServer*)arg)->ConnectClient();
+		if (TRUE == successFunc || TRUE == ((PipeServer*)arg)->GetexitThread())
+		{
+			break;
+		}
+	}
+	
 	return 0;
 }
 
@@ -95,27 +104,39 @@ UINT WINAPI PipeServer::ConnectClientThread(LPVOID arg)
 BOOL PipeServer::DisconnectClient()
 {
 	BOOL successFunc = FALSE;
-	successFunc = DisconnectNamedPipe(namedPipe);
-	if (!successFunc)
+	if (INVALID_HANDLE_VALUE != ConnectClientHandle)
 	{
-		wprintf(L"DisconnectNamedPipe failed with %d.\n", GetLastError());
-		return FALSE;
+		exitThread = TRUE;
+		WaitForSingleObject(ConnectClientHandle, INFINITE);
+		WaitForSingleObject(ConnectClientHandle, INFINITE);
+		ConnectClientHandle = INVALID_HANDLE_VALUE;
+		exitThread = FALSE;
+		CloseHandle(ConnectClientHandle);
 	}
 
+	if (INVALID_HANDLE_VALUE != namedPipe)
+	{
+		successFunc = DisconnectNamedPipe(namedPipe);
+		if (!successFunc)
+		{
+			wprintf(L"DisconnectNamedPipe failed with %d.\n", GetLastError());
+			return FALSE;
+		}
+	}	
+
 	wprintf(L"Send & Disconnect Done\n");
-	CloseHandle(ConnectClientHandle);
 	ConnectFlag = FALSE;
 	
 	return TRUE;
 }
 
 // 데이터 송신
-void PipeServer::Send()
+BOOL PipeServer::Send()
 {
 	if (FALSE == ConnectFlag)
 	{
 		wprintf(L"Pipe Not Connnect\n");
-		return ;
+		return FALSE;
 	}
 
 	DWORD sendSize = 0;
@@ -124,16 +145,16 @@ void PipeServer::Send()
 	{
 		wprintf(L"WriteFile Fail\n");
 	}
-	return;
+	return TRUE;
 }
 
 // 데이터 수신
-void PipeServer::Receive()
+BOOL PipeServer::Receive()
 {
 	if (FALSE == ConnectFlag)
 	{
 		wprintf(L"Pipe Not Connnect\n");
-		return;
+		return FALSE;
 	}
 
 	DWORD recvSize = 0;
@@ -144,5 +165,24 @@ void PipeServer::Receive()
 	{
 		wprintf(L"ReadFile Fail\n");
 	}
-	return;
+	return TRUE;
+}
+
+BOOL PipeServer::GetWinData(std::wstring& returnString)
+{
+	if (FALSE == ConnectFlag)
+	{
+		wprintf(L"Pipe Not Connnect\n");
+		return FALSE;
+	}
+	returnString = std::wstring(WinData.winMessage);
+	returnString += L"(";
+	returnString += std::to_wstring(WinData.messageCode);
+	returnString += L")";
+	return TRUE;
+}
+
+BOOL PipeServer::GetexitThread()
+{
+	return exitThread;
 }

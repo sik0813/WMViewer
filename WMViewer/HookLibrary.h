@@ -31,6 +31,7 @@ private:
 	HINSTANCE LoadDll;
 	Starting StartHooking;
 	Stoping StopHooking;
+	BOOL runningHooking = FALSE;
 	DWORD GetWindowID = 0;
 
 public:
@@ -42,7 +43,14 @@ public:
 			return FALSE;
 		}
 
+		if (TRUE == runningHooking)
+		{
+			wprintf(L"Already Running Hooking");
+			return FALSE;
+		}
+
 		StartHooking(GetWindowID);
+		runningHooking = TRUE;
 		return TRUE;
 	}
 
@@ -54,7 +62,14 @@ public:
 			return FALSE;
 		}
 
+		if (FALSE == runningHooking)
+		{
+			wprintf(L"Not Running Hooking");
+			return FALSE;
+		}
+
 		StopHooking();
+		runningHooking = FALSE;
 		return TRUE;
 	}
 };

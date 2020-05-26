@@ -4,7 +4,8 @@
 
 HookLibrary *AllHookLibrary;
 PipeServer *Server;
-BOOL EndShow = FALSE;
+BOOL endShow = FALSE;
+HANDLE showMessageThread = INVALID_HANDLE_VALUE;
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nShowCmd)
 {
@@ -36,7 +37,17 @@ void OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 	{
 	case IDCANCEL:
 	case IDOK:
+		AllHookLibrary->StopHook();
 		AllHookLibrary->~HookLibrary();
+		Server->DisconnectClient();
+		if (INVALID_HANDLE_VALUE != showMessageThread)
+		{
+			endShow = TRUE;
+			//TerminateThread(showMessageThread, 0);
+			WaitForSingleObject(showMessageThread, INFINITE);
+			CloseHandle(showMessageThread);
+			showMessageThread = INVALID_HANDLE_VALUE;
+		}
 		delete AllHookLibrary;
 		delete Server;
 		EndDialog(hwnd, id);
@@ -50,8 +61,9 @@ void OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 		SuccessFuc = AllHookLibrary->StartHook();
 		if (TRUE == SuccessFuc)
 		{
-			Server->ConnectClient();
+			Server->CreateServer();
 			MessageBoxW(hwnd, L"Start Hooking", L"", MB_OK);
+			showMessageThread = (HANDLE)_beginthreadex(NULL, 0, ShowWinMessage, (void*)GetDlgItem(hwnd, IDC_WMMESSAGELIST), NULL, NULL);
 		}
 
 		break;
@@ -60,6 +72,14 @@ void OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 		SuccessFuc = AllHookLibrary->StopHook();
 		if (TRUE == SuccessFuc)
 		{
+			if (INVALID_HANDLE_VALUE != showMessageThread)
+			{
+				endShow = TRUE;
+				WaitForSingleObject(showMessageThread, INFINITE);
+				//TerminateThread(showMessageThread, 0);
+				CloseHandle(showMessageThread);
+				showMessageThread = INVALID_HANDLE_VALUE;
+			}
 			Server->DisconnectClient();
 			MessageBoxW(hwnd, L"Stop Hooking", L"", MB_OK);
 		}
@@ -79,41 +99,11 @@ BOOL OnInitDialog(HWND hwnd, HWND hwndFocus, LPARAM lParam)
 	return TRUE;
 }
 
-void PrintProcessNameAndID(DWORD processID, HWND hwnd)
-{
-	WCHAR szProcessName[MAX_PATH] = { 0, };
-	// Get a handle to the process.
-
-	HANDLE hProcess = OpenProcess(
-		PROCESS_QUERY_INFORMATION |	PROCESS_VM_READ,
-		FALSE, 
-		processID);
-
-	// Get the process name.
-	if (NULL != hProcess)
-	{
-		DWORD successFunc = GetModuleFileNameEx( // GetModuleBaseNameW : 실행 파일명
-			hProcess, 
-			0, 
-			szProcessName, 
-			sizeof(szProcessName) / sizeof(WCHAR)); 
-		if (NULL != successFunc)
-		{
-			std::wstring addItem(wcsrchr(szProcessName, L'\\') + 1);
-			addItem += L"(PID: ";
-			addItem += std::to_wstring(processID);
-			addItem += L")";
-			ListBox_AddString(hwnd, addItem.c_str());
-		}
-	}
-	CloseHandle(hProcess);
-}
 
 BOOL ShowProcessList(HWND hwnd)
 {
 	// Get the list of process identifiers.
 	DWORD aProcesses[1024] = { 0, }, listByte = 0;
-	memset(&aProcesses, 0, sizeof(aProcesses));
 
 	BOOL sucessFunc = EnumProcesses(aProcesses, sizeof(aProcesses), &listByte);
 	if (NULL == sucessFunc)
@@ -133,15 +123,60 @@ BOOL ShowProcessList(HWND hwnd)
 	return TRUE;
 }
 
+
+void PrintProcessNameAndID(DWORD processID, HWND hwnd)
+{
+	WCHAR szProcessName[MAX_PATH] = { 0, };
+	// Get a handle to the process.
+
+	HANDLE hProcess = OpenProcess(
+		PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
+		FALSE,
+		processID);
+
+	// Get the process name.
+	if (NULL != hProcess)
+	{
+		DWORD successFunc = GetModuleFileNameEx( // GetModuleBaseNameW : 실행 파일명
+			hProcess,
+			0,
+			szProcessName,
+			sizeof(szProcessName) / sizeof(WCHAR));
+		if (NULL != successFunc)
+		{
+			std::wstring addItem(wcsrchr(szProcessName, L'\\') + 1);
+			addItem += L"(PID: ";
+			addItem += std::to_wstring(processID);
+			addItem += L")";
+			ListBox_AddString(hwnd, addItem.c_str());
+		}
+	}
+	CloseHandle(hProcess);
+}
+
+
 UINT WINAPI ShowWinMessage(LPVOID arg)
 {
 	while (1)
 	{
-		if (TRUE == EndShow)
+		if (TRUE == endShow)
 		{
 			break;
 		}
+
+		BOOL successFunc = Server->Receive();
+		if (FALSE == successFunc)
+		{
+			continue;
+		}
+		
+		std::wstring showMessage = L"";
+		successFunc = Server->GetWinData(showMessage);
+		if (TRUE == successFunc)
+		{
+			ListBox_AddString((HWND)arg, showMessage.c_str());
+		}
 	}
-	EndShow = FALSE;
+	endShow = FALSE;
 	return 0;
 }

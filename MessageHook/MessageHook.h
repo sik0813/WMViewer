@@ -14,7 +14,6 @@
 
 #include <map>
 #include <Windows.h>
-#include "PipeClient.h"
 
 EXPORT void StartHook(DWORD threadID = 0);
 EXPORT void StopHook(void);
