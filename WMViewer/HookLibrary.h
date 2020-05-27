@@ -1,5 +1,6 @@
 #pragma once
 #include <Windows.h>
+#include "..\MessageHook\MessageHook.h"
 
 typedef void(*Starting)(DWORD);
 typedef void(*Stoping)(void);
@@ -9,17 +10,17 @@ class HookLibrary
 public:
 	HookLibrary()
 	{
-		LoadDll = LoadLibraryW(L"MessageHook");
-		StartHooking = (Starting)GetProcAddress(LoadDll, "StartHook");
-		StopHooking = (Stoping)GetProcAddress(LoadDll, "StopHook");
+		//LoadDll = LoadLibraryW(L"MessageHook");
+		//StartHooking = (Starting)GetProcAddress(LoadDll, "StartHook");
+		//StopHooking = (Stoping)GetProcAddress(LoadDll, "StopHook");
 	}
 
 	HookLibrary(DWORD _GetWindowID)
 	{
 		GetWindowID = _GetWindowID;
 		LoadDll = LoadLibraryW(L"MessageHook");
-		StartHooking = (Starting)GetProcAddress(LoadDll, "StartHook");
-		StopHooking = (Stoping)GetProcAddress(LoadDll, "StopHook");
+		StartHookingFunc = (Starting)GetProcAddress(LoadDll, "StartHook");
+		StopHookingFunc = (Stoping)GetProcAddress(LoadDll, "StopHook");
 	}
 
 	~HookLibrary()
@@ -29,19 +30,19 @@ public:
 
 private:
 	HINSTANCE LoadDll;
-	Starting StartHooking;
-	Stoping StopHooking;
+	Starting StartHookingFunc;
+	Stoping StopHookingFunc;
 	BOOL runningHooking = FALSE;
 	DWORD GetWindowID = 0;
 
 public:
-	BOOL StartHook()
+	BOOL StartHooking()
 	{
-		if (NULL == StartHooking)
-		{
-			wprintf(L"StartHooking Error");
-			return FALSE;
-		}
+		//if (NULL == StartHookingFunc)
+		//{
+		//	wprintf(L"StartHooking Error");
+		//	return FALSE;
+		//}
 
 		if (TRUE == runningHooking)
 		{
@@ -49,18 +50,19 @@ public:
 			return FALSE;
 		}
 
-		StartHooking(GetWindowID);
+		//StartHooking(GetWindowID);
+		StartHook();
 		runningHooking = TRUE;
 		return TRUE;
 	}
 
-	BOOL StopHook()
+	BOOL StopHooking()
 	{
-		if (NULL == StopHooking)
-		{
-			wprintf(L"StopHooking Error");
-			return FALSE;
-		}
+		//if (NULL == StopHookingFunc)
+		//{
+		//	wprintf(L"StopHooking Error");
+		//	return FALSE;
+		//}
 
 		if (FALSE == runningHooking)
 		{
@@ -68,7 +70,7 @@ public:
 			return FALSE;
 		}
 
-		StopHooking();
+		StopHook();
 		runningHooking = FALSE;
 		return TRUE;
 	}

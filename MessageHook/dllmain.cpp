@@ -16,14 +16,14 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 {
 	WCHAR szProcessName[MAX_PATH] = { 0, };
 	DWORD successFunc = GetModuleFileName(NULL, szProcessName, sizeof(szProcessName) / sizeof(WCHAR));
-	if (0 != wcscmp(L"notepad.exe", wcsrchr(szProcessName, L'\\') + 1))
-	{
-		return TRUE;
-	}
 	switch (ul_reason_for_call)
 	{
 	case DLL_PROCESS_ATTACH:
 		kdllInstanceHandle = (HINSTANCE)hModule;
+		if (0 != wcscmp(L"notepad.exe", wcsrchr(szProcessName, L'\\') + 1))
+		{
+			Client = new ClientPipe();
+		}
 		break;
 
 	case DLL_THREAD_ATTACH:
@@ -33,7 +33,10 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 		break;
 
 	case DLL_PROCESS_DETACH:
-		delete Client;
+		if (0 != wcscmp(L"notepad.exe", wcsrchr(szProcessName, L'\\') + 1))
+		{
+			delete Client;
+		}
 		break;
 	}
 	return TRUE;
@@ -57,23 +60,20 @@ LRESULT WINAPI GetMsgProc(int nCode, WPARAM wParam, LPARAM lParam)
 	WCHAR szProcessName[MAX_PATH] = { 0, };
 	HANDLE thisProcess = GetCurrentProcess();
 	DWORD successFunc = GetModuleFileNameEx(thisProcess, 0, szProcessName, sizeof(szProcessName) / sizeof(WCHAR));
-	if (NULL != successFunc && nCode >= 0)
+	if (NULL != successFunc)
 	{
 		if (0 == wcscmp(L"notepad.exe", wcsrchr(szProcessName, L'\\') + 1))
 		{
-			if (NULL == Client)
-			{
-				Client = new ClientPipe();
-				Client->ConnectServer();
-			}
 			if (INVALID_HANDLE_VALUE == Client->GetNamedPipe())
 			{
 				Client->ConnectServer();
 			}
 			LPMSG senMSG = (LPMSG)lParam;
-			if(senMSG->message>0)
-			Client->SetWinData(wmTranslation[senMSG->message], senMSG->message, NULL, NULL);
-			Client->Send();
+			if (senMSG->message > 0)
+			{
+				Client->SetWinData(wmTranslation[senMSG->message], senMSG->message, NULL, NULL);
+				Client->Send();
+			}
 		}
 	}
 	return CallNextHookEx(kconnnectHook, nCode, wParam, lParam);

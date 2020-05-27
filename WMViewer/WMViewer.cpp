@@ -37,8 +37,7 @@ void OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 	{
 	case IDCANCEL:
 	case IDOK:
-		AllHookLibrary->StopHook();
-		AllHookLibrary->~HookLibrary();
+		AllHookLibrary->StopHooking();
 		Server->DisconnectClient();
 		if (INVALID_HANDLE_VALUE != showMessageThread)
 		{
@@ -58,7 +57,7 @@ void OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 		break;
 
 	case IDC_START:
-		SuccessFuc = AllHookLibrary->StartHook();
+		SuccessFuc = AllHookLibrary->StartHooking();
 		if (TRUE == SuccessFuc)
 		{
 			Server->CreateServer();
@@ -69,7 +68,7 @@ void OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 		break;
 
 	case IDC_STOP:
-		SuccessFuc = AllHookLibrary->StopHook();
+		SuccessFuc = AllHookLibrary->StopHooking();
 		if (TRUE == SuccessFuc)
 		{
 			if (INVALID_HANDLE_VALUE != showMessageThread)

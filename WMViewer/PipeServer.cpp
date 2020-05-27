@@ -57,7 +57,14 @@ BOOL PipeServer::CreateServer()
 	if (INVALID_HANDLE_VALUE == namedPipe)
 	{
 		wprintf(L"CreateNamePipe error! \n");
-		return -1;
+		return FALSE;
+	}
+
+	successFunc = WaitNamedPipeW(pipeName, 2000);
+	if (NULL == successFunc)
+	{
+		wprintf(L"WaitNamedPipeW error! \n");
+		return FALSE;
 	}
 
 	ConnectClientHandle = (HANDLE)_beginthreadex(NULL, 0, &ConnectClientThread, this, NULL, NULL);
@@ -70,15 +77,16 @@ BOOL PipeServer::ConnectClient()
 	BOOL successFunc = FALSE;
 	
 	//생성한 Named Pipe의 핸들을 누군가 얻어갈 때까지 대기..
-	successFunc = ConnectNamedPipe(
-		namedPipe,
+	// ConnectNamedPipe
+	successFunc = WaitNamedPipeW(
+		pipeName,//namedPipe,
 		NULL);
 	if (!successFunc)
 	{
-		CloseHandle(namedPipe);
-		namedPipe = INVALID_HANDLE_VALUE;
+		//CloseHandle(namedPipe);
+		//namedPipe = INVALID_HANDLE_VALUE;
 		return FALSE;
-	}
+	}	
 
 	ConnectFlag = TRUE;
 	return TRUE;
@@ -108,7 +116,6 @@ BOOL PipeServer::DisconnectClient()
 	{
 		exitThread = TRUE;
 		WaitForSingleObject(ConnectClientHandle, INFINITE);
-		WaitForSingleObject(ConnectClientHandle, INFINITE);
 		ConnectClientHandle = INVALID_HANDLE_VALUE;
 		exitThread = FALSE;
 		CloseHandle(ConnectClientHandle);
@@ -122,11 +129,11 @@ BOOL PipeServer::DisconnectClient()
 			wprintf(L"DisconnectNamedPipe failed with %d.\n", GetLastError());
 			return FALSE;
 		}
-	}	
+	}
 
 	wprintf(L"Send & Disconnect Done\n");
 	ConnectFlag = FALSE;
-	
+
 	return TRUE;
 }
 
