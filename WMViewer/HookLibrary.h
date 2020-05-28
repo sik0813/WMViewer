@@ -25,7 +25,7 @@ public:
 
 	~HookLibrary()
 	{
-		FreeLibrary(LoadDll);
+		//FreeLibrary(LoadDll);
 	}
 
 private:

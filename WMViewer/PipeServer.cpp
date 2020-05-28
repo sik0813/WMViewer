@@ -60,13 +60,6 @@ BOOL PipeServer::CreateServer()
 		return FALSE;
 	}
 
-	successFunc = WaitNamedPipeW(pipeName, 2000);
-	if (NULL == successFunc)
-	{
-		wprintf(L"WaitNamedPipeW error! \n");
-		return FALSE;
-	}
-
 	ConnectClientHandle = (HANDLE)_beginthreadex(NULL, 0, &ConnectClientThread, this, NULL, NULL);
 	return TRUE;
 }
@@ -75,13 +68,22 @@ BOOL PipeServer::CreateServer()
 BOOL PipeServer::ConnectClient()
 {
 	BOOL successFunc = FALSE;
+	HANDLE eventHandle = CreateEventW(
+		NULL,    // default security attribute 
+		TRUE,    // manual-reset event 
+		TRUE,    // initial state = signaled 
+		NULL);   // unnamed event object 
+	OVERLAPPED op;
+	ZeroMemory(&op, sizeof(OVERLAPPED));
+	op.hEvent = eventHandle;
+
 	
 	//생성한 Named Pipe의 핸들을 누군가 얻어갈 때까지 대기..
-	// ConnectNamedPipe
-	successFunc = WaitNamedPipeW(
-		pipeName,//namedPipe,
-		NULL);
-	if (!successFunc)
+	// WaitNamedPipeW
+	successFunc = ConnectNamedPipe(
+		namedPipe,
+		NULL);// NULL);
+	if (FALSE == successFunc)
 	{
 		//CloseHandle(namedPipe);
 		//namedPipe = INVALID_HANDLE_VALUE;
@@ -151,6 +153,7 @@ BOOL PipeServer::Send()
 	if (FALSE == successFunc)
 	{
 		wprintf(L"WriteFile Fail\n");
+		return FALSE;
 	}
 	return TRUE;
 }
@@ -171,6 +174,7 @@ BOOL PipeServer::Receive()
 	if (FALSE == successFunc)
 	{
 		wprintf(L"ReadFile Fail\n");
+		return FALSE;
 	}
 	return TRUE;
 }
