@@ -4,12 +4,16 @@ PipeServer::PipeServer()
 {
 	ZeroMemory(&WinData, sizeof(WMData));
 	WinData.messageCode = -1;
+	eventHandle = CreateEventW(NULL, FALSE, FALSE, NULL);
+	ZeroMemory(&op, sizeof(OVERLAPPED));
+	op.hEvent = eventHandle;
 }
 
 PipeServer::~PipeServer()
 {
 	CloseHandle(namedPipe);
 	CloseHandle(ConnectClientHandle);
+	CloseHandle(eventHandle);
 	namedPipe = INVALID_HANDLE_VALUE;
 }
 
@@ -51,7 +55,7 @@ BOOL PipeServer::CreateServer()
 		PIPE_UNLIMITED_INSTANCES,
 		0,
 		0,
-		20000,       // 대기 Timeout 시간
+		1000,       // Client Timeout 시간
 		&sa
 	);
 	if (INVALID_HANDLE_VALUE == namedPipe)
@@ -73,16 +77,12 @@ BOOL PipeServer::ConnectClient()
 		TRUE,    // manual-reset event 
 		TRUE,    // initial state = signaled 
 		NULL);   // unnamed event object 
-	OVERLAPPED op;
-	ZeroMemory(&op, sizeof(OVERLAPPED));
-	op.hEvent = eventHandle;
-
 	
 	//생성한 Named Pipe의 핸들을 누군가 얻어갈 때까지 대기..
 	// WaitNamedPipeW
 	successFunc = ConnectNamedPipe(
 		namedPipe,
-		NULL);// NULL);
+		NULL);
 	if (FALSE == successFunc)
 	{
 		//CloseHandle(namedPipe);
@@ -170,12 +170,25 @@ BOOL PipeServer::Receive()
 	DWORD recvSize = 0;
 	ZeroMemory(&WinData, sizeof(WMData)); // 데이터 수신 전 초기화
 	WinData.messageCode = -1;
-	BOOL successFunc = ReadFile(namedPipe, &WinData, sizeof(WMData), &recvSize, NULL); // 수신
-	if (FALSE == successFunc)
+
+	//PIPE Read
+	BOOL successFunc = ReadFile(namedPipe, &WinData, sizeof(WMData), &recvSize, &op); // 수신
+	if (GetLastError() == ERROR_IO_PENDING)
 	{
-		wprintf(L"ReadFile Fail\n");
-		return FALSE;
+		//일정 시간 메시지 대기
+		DWORD waitRead = WaitForSingleObject(eventHandle, 50);
+		if (waitRead != WAIT_OBJECT_0)
+		{
+			return FALSE;
+		}
+
+		if (FALSE == GetOverlappedResult(eventHandle, &op, &recvSize, TRUE))
+		{
+			return FALSE;
+		}
 	}
+	
+
 	return TRUE;
 }
 
@@ -189,7 +202,10 @@ BOOL PipeServer::GetWinData(std::wstring& returnString)
 	returnString = std::wstring(WinData.winMessage);
 	returnString += L"(";
 	returnString += std::to_wstring(WinData.messageCode);
-	returnString += L")";
+	returnString += L")      wParam:";
+	returnString += std::to_wstring(WinData.wParam);
+	returnString += L"   |    lParam:";
+	returnString += std::to_wstring(WinData.lParam);;
 	return TRUE;
 }
 

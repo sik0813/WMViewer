@@ -39,7 +39,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 	case DLL_PROCESS_DETACH:
 		if (NULL != wcsrchr(szProcessName, L'\\'))
 		{
-			if (0 != wcscmp(L"notepad.exe", wcsrchr(szProcessName, L'\\') + 1))
+			if (0 == wcscmp(L"notepad.exe", wcsrchr(szProcessName, L'\\') + 1))
 			{
 				delete Client;
 			}
@@ -65,16 +65,15 @@ EXPORT void StopHook(void)
 LRESULT WINAPI GetMsgProc(int nCode, WPARAM wParam, LPARAM lParam)
 {
 	WCHAR szProcessName[MAX_PATH] = { 0, };
-	HANDLE thisProcess = GetCurrentProcess();
-	DWORD successFunc = GetModuleFileNameEx(thisProcess, 0, szProcessName, sizeof(szProcessName) / sizeof(WCHAR));
+	GetModuleFileNameEx(GetCurrentProcess(), 0, szProcessName, sizeof(szProcessName) / sizeof(WCHAR));
 
 	if (nCode < 0)
 		return CallNextHookEx(kconnnectHook, nCode, wParam, lParam);
 
-	LPWSTR comProcessName = wcsrchr(szProcessName, L'\\');
-	if (NULL != comProcessName)
+	LPWSTR compProcessName = wcsrchr(szProcessName, L'\\');
+	if (NULL != compProcessName)
 	{
-		if (0 == wcscmp(L"notepad.exe", comProcessName + 1))
+		if (0 == wcscmp(L"notepad.exe", compProcessName + 1))
 		{
 			if (INVALID_HANDLE_VALUE == Client->GetNamedPipe())
 			{
@@ -88,10 +87,10 @@ LRESULT WINAPI GetMsgProc(int nCode, WPARAM wParam, LPARAM lParam)
 				switch (wParam)
 				{
 				case PM_REMOVE:
-				case PM_NOREMOVE:					
-					if (NULL != wmTranslation[senMSG->message] && senMSG->message > 0)
+				case PM_NOREMOVE:
+					if (senMSG->message > 0)
 					{
-						Client->SetWinData(wmTranslation[senMSG->message], senMSG->message, NULL, NULL);
+						Client->SetWinData(wmTranslation[senMSG->message], senMSG->message, senMSG->wParam, senMSG->lParam);
 						Client->Send();
 					}
 					break;
@@ -112,8 +111,7 @@ LRESULT WINAPI GetMsgProc(int nCode, WPARAM wParam, LPARAM lParam)
 
 ClientPipe::ClientPipe()
 {
-	ZeroMemory(&WinData, sizeof(WMData));
-	WinData.messageCode = -1;
+	InitWMData();
 }
 
  ClientPipe::~ClientPipe()
@@ -169,10 +167,24 @@ BOOL ClientPipe::DisconnectServer()
 
 void ClientPipe::SetWinData(LPWSTR _WinMessage, int _WinCode, WPARAM _wParam, LPARAM _lParam)
 {
-	StringCchCopyW(WinData.winMessage, wcslen(_WinMessage) + 1, _WinMessage);
+	if (NULL == _WinMessage)
+	{
+		StringCchCopyW(WinData.winMessage, wcslen(L"unknown") + 1, L"unknown");
+	}
+	else
+	{
+		StringCchCopyW(WinData.winMessage, wcslen(_WinMessage) + 1, _WinMessage);
+	}
+	
 	WinData.messageCode = _WinCode;
 	WinData.wParam = _wParam;
 	WinData.lParam = _lParam;
+}
+
+void ClientPipe::InitWMData()
+{
+	ZeroMemory(&WinData, sizeof(WMData));
+	WinData.messageCode = -1;
 }
 
 BOOL ClientPipe::Send()
@@ -184,6 +196,7 @@ BOOL ClientPipe::Send()
 		sizeof(WMData),
 		&sendSize,
 		NULL);
+	InitWMData();
 	if (!successFunc)
 	{
 		//MessageBoxW((HWND)kdllInstanceHandle, L"Send error", L"", MB_OK);
@@ -191,7 +204,6 @@ BOOL ClientPipe::Send()
 		return FALSE;
 	}
 
-	ZeroMemory(&WinData, sizeof(WMData));
 	return TRUE;
 }
 
@@ -211,7 +223,6 @@ BOOL ClientPipe::Receive()
 	}
 
 	FlushFileBuffers(namedPipe);
-
 	return TRUE;
 }
 

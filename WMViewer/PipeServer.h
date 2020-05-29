@@ -23,6 +23,8 @@ private:
 	HANDLE namedPipe = INVALID_HANDLE_VALUE;
 	BOOL ConnectFlag = FALSE;
 	HANDLE ConnectClientHandle = INVALID_HANDLE_VALUE;
+	HANDLE eventHandle;
+	OVERLAPPED op;
 	WMData WinData;
 	BOOL exitThread = FALSE;
 public:

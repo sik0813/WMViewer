@@ -24,6 +24,7 @@ public:
 	BOOL ConnectServer();
 	BOOL DisconnectServer();
 	void SetWinData(LPWSTR _WinMessage, int _WinCode, WPARAM _wParam, LPARAM _lParam);
+	void InitWMData();
 	BOOL Send();
 	BOOL Receive();
 	HANDLE GetNamedPipe();
